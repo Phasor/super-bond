@@ -1,4 +1,5 @@
 const { web3tx, toWad, wad4human } = require("@decentral.ee/web3-helpers");
+require("dotenv").config();
 // We require the Hardhat Runtime Environment explicitly here. This is optional
 // but useful for running the script in a standalone fashion through `node <script>`.
 //

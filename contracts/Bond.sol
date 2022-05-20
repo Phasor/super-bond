@@ -40,7 +40,7 @@ contract Bond is SuperAppBase {
     bool private borrowerHasLoan;
     bool private initialSetup;
     bool public openToDeposits;
-    address[] public whitelistedTokens;
+    mapping (address => bool) public whitelistedTokens;
 
     constructor(
         ISuperfluid host,
@@ -53,6 +53,9 @@ contract Bond is SuperAppBase {
         require(address(host) != address(0), "host is zero address");
         require(address(cfa) != address(0), "cfa is zero address");
         require(address(acceptedToken) != address(0),"acceptedToken is zero address");
+        require(loanTerm > 0, "Can not have a loan term less than 1 day");
+        require(fundingRate > 0, "Can not have a negative interest rate");
+        require(fundingTarget > 0, "Can not have a negative funding target");
 
         _host = host;
         _cfa = IConstantFlowAgreementV1(
@@ -81,15 +84,37 @@ contract Bond is SuperAppBase {
      * Bond logic
      *************************************************************************/
 
+//Events
+    event depositEvent(address depositor, int96 amount);
+
 /// @dev whitelists the token so it can be deposited into this contract
     function whitelistToken(address tokenAddress) external onlyAdmin {
-        whitelistedTokens.push(tokenAddress);
+        whitelistedTokens[tokenAddress] = true;
     }
 
-/// @dev deposit wrapped ERC20's
-    function deposit(int96 amount, address token ) external returns(bool) {
-        //end user will call approve, then app will transferFrom there ERC2 to the SF upgrade function to wrap
-        //then wrapped tokens will be deposited
+/// @dev deposit wrapped ERC20's for lending to the borrower
+    function deposit(int96 amount, address tokenAddress ) external {
+        require(whitelistedTokens[tokenAddress], "Can not deposit this token. Please whitelist it.");
+        require(openToDeposits,"closed to deposits");
+        require(_fundingTarget - int96(int(ISuperToken(tokenAddress).balanceOf(address(this))))  > amount,"Not enough loan capacity for deposit this big");
+
+        //Transer tokens into conract for lending
+        //Lender needs to have called approve() already on front
+        int256 transferAmount = int256(amount);
+        ISuperToken(tokenAddress).transferFrom(msg.sender, address(this), uint(transferAmount));
+
+        //Store the lender deposit. Check for overflow
+        int96 tmpContribution = lenderContributions[msg.sender];
+        lenderContributions[msg.sender] = lenderContributions[msg.sender] + amount;
+        require(lenderContributions[msg.sender] > tmpContribution, "over flow");
+
+        //add investor to the register of lenders if not already there
+        if (!lenderExists[msg.sender]) {
+            lenderAddresses.push(msg.sender);
+            lenderExists[msg.sender] = true;
+        }
+
+        emit depositEvent(msg.sender, amount);
     }
 
 /// @dev helper to calc each investors flow rate, wei/second
@@ -107,50 +132,31 @@ contract Bond is SuperAppBase {
     flowRate = totalInvestorCFPerSecondWei;
     }
 
-/// @dev transfers the investors funds raised from contract to the borrower
+/// @dev transfers the investors funds raised from this contract to the borrower
     function _transferAllFundsToBorrower() private {
-        require(address(this).balance > 0, "contract is empty");
+        require(ISuperToken(_acceptedToken).balanceOf(address(this)) > 0, "contract does not own any of the accepted token");
         require(openToDeposits = true,"closed to deposits");
-        _amountRaised = int96(int(address(this).balance));
+        _amountRaised = int96(int(ISuperToken(_acceptedToken).balanceOf(address(this))));
         
         //close fund raising period
         openToDeposits = false;
         borrowerHasLoan = true;
         
-        //if non-empty transfer balance of funds raised
-        (bool sent, ) = borrower.call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether to Borrower");
+        //transfer all funds raised from contract to borrower
+        int256 amountRaisedForCall = int256(_amountRaised); //convert to 256 for .transfer below
+        ISuperToken(_acceptedToken).transfer(borrower, uint256(amountRaisedForCall));
 
         (, int96  initialBorrowerFlowRate, , ) = _cfa.getFlow(_acceptedToken, address(this), borrower);
          _initialBorrowerFlowRate = initialBorrowerFlowRate;
     }
 
-/// @dev 
-     fallback() external {
-        require(openToDeposits,"closed to deposits");
-        require(_fundingTarget - address(this).balance < msg.value,"Not enough loan capacity");
-    }
-
-    receive() external payable {
-         require(openToDeposits,"closed to deposits");
-         require(_fundingTarget - address(this).balance < msg.value,"Not enough loan capacity");
-         //store the amount sent. Can handle situation where same user sends more than once 
-        int96 memory tmpContribution = lenderContributions[msg.sender];
-        lenderContributions[msg.sender] = lenderContributions[msg.sender] + int96(int(msg.value));
-        require(lenderContributions[msg.sender] > tmpContribution, "over flow");
-        //add investor to the register of lenders if not already there
-        if (!lenderExists[msg.sender]) {
-            lenderAddresses.push(msg.sender);
-            lenderExists[msg.sender] = true;
-        }
-    }
-
-/// @dev function sets the flow rate for each investor
+/// @dev sets the flow rate for each investor for easy creation of CFA agreement
     function _setAllInvestorFlowRates() private {
-        uint256 memory numOfInvestors = lenderAddresses.length;
+        uint256 numOfInvestors = lenderAddresses.length;
         //loop through the investors and set the flow rate for each
         for (uint i = 1; i <= numOfInvestors; i++) {
-            lenderFlowRate[lenderAddresses[i-1]] = _calcInvestorFlowRate(lenderAddresses[i-1]);
+            address currentInvestor = lenderAddresses[i-1];
+            lenderFlowRate[currentInvestor] = _calcInvestorFlowRate(currentInvestor);
         }
     }
 
@@ -165,12 +171,12 @@ contract Bond is SuperAppBase {
         (, int96 newBorrowerFlowRate, , ) = _cfa.getFlow(_acceptedToken,address(this),borrower);
         
         newCtx = ctx;
-        uint256 memory numOfInvestors = lenderAddresses.length;
+        uint256 numOfInvestors = lenderAddresses.length;
         
         if (initialSetup == true) { 
-            int96 memory outFlowRate;
+            int96 outFlowRate;
 
-            //loop through all investors and create a new CFA flow for each of them from contract to investor
+            //create a new CFA flow from this contract to all investors 
             for (uint256 i = 1; i <= numOfInvestors; i++) {
                 //create a new CFA  - THIS NEEDS TO BE A BATCH CALL *************
                 outFlowRate = lenderFlowRate[lenderAddresses[i-1]];
@@ -182,7 +188,7 @@ contract Bond is SuperAppBase {
                 );
             initialSetup = false; //stop the initial CFAs to investors being setup again
             }
-        } else if (newBorrowerFlowRate == 0) { //borrower has deleted the repayment flow to the contract
+        } else if (newBorrowerFlowRate == int(0)) { //borrower has deleted the repayment flow to the contract
             //delete all CFAs to all investors
             for (uint256 i = 1; i <= numOfInvestors; i++) {
                 newCtx = cfaV1.deleteFlowWithCtx(
@@ -236,7 +242,7 @@ contract Bond is SuperAppBase {
             _transferAllFundsToBorrower();
             _setAllInvestorFlowRates(); //sets the flow rates for internal accounting
         }
-       
+
         return _updateInvestorFlows(_ctx);
     }
 
@@ -316,6 +322,14 @@ contract Bond is SuperAppBase {
         require(admin() == msg.sender, "caller is not the admin");
         _;
     }
+    
+    // /**
+    //  * @dev Throws if called by any account other than the borrower.
+    //  */
+    // modifier onlyBorrower() {
+    //     require(borrower == msg.sender, "only the borrower can call this function");
+    //     _;
+    // }
 
 
 

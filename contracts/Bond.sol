@@ -22,7 +22,7 @@ contract Bond is SuperAppBase {
     ISuperfluid private _host; // SF host contract
     IConstantFlowAgreementV1 private _cfa; // the stored constant flow agreement class address
     ISuperToken private _acceptedToken; // wrapped super token
-
+    address public acceptedTokenAddress;
     //variables for bond logic
     int96 private _fundingTarget; //the amount in wei the borrower wants to raise from the bond
     int96 private _amountRaised; // wei actually raised at the end of the campaign
@@ -36,11 +36,10 @@ contract Bond is SuperAppBase {
     address[] private lenderAddresses;
     mapping (address => int96) private lenderFlowRate; //wei
     int96 public constant secondsPerYear = 31536000;
-    bool private investorFlowRatesSet; 
     bool private borrowerHasLoan;
     bool private initialSetup;
     bool public openToDeposits;
-    mapping (address => bool) public whitelistedTokens;
+    int96 private _totalRepaid;
 
     constructor(
         ISuperfluid host,
@@ -63,6 +62,7 @@ contract Bond is SuperAppBase {
             )
         );
         _acceptedToken = acceptedToken;
+        acceptedTokenAddress = address(_acceptedToken);
         _fundingTarget = fundingTarget;
         _fundingRate = fundingRate;
         _loanTerm = loanTerm;
@@ -86,15 +86,14 @@ contract Bond is SuperAppBase {
 
 //Events
     event depositEvent(address depositor, int96 amount);
-
-/// @dev whitelists the token so it can be deposited into this contract
-    function whitelistToken(address tokenAddress) external onlyAdmin {
-        whitelistedTokens[tokenAddress] = true;
-    }
+    event InitialSetup(address borrower, int96 borrowerFlowRate, address acceptedToken);
+    event TransferAllToBorrower(int96 _amountRaised, address to, address from);
+    event cfaTerminated(address from, address to);
+    
 
 /// @dev deposit wrapped ERC20's for lending to the borrower
     function deposit(int96 amount, address tokenAddress ) external {
-        require(whitelistedTokens[tokenAddress], "Can not deposit this token. Please whitelist it.");
+        require(tokenAddress == acceptedTokenAddress, "Can not deposit this token");
         require(openToDeposits,"closed to deposits");
         require(_fundingTarget - int96(int(ISuperToken(tokenAddress).balanceOf(address(this))))  > amount,"Not enough loan capacity for deposit this big");
 
@@ -119,8 +118,6 @@ contract Bond is SuperAppBase {
 
 /// @dev helper to calc each investors flow rate, wei/second
     function _calcInvestorFlowRate(address investorAddress) view private returns (int96 flowRate) {
-    
-    ///// THIS IS NOT RIGHT< SHOULD BE ABLE TO DEAL WITH A SITUATION WHERE BORROWER UPDATES FLOW
 
     int96 totalInterestPerYear = (_amountRaised * _fundingRate) / 10000;  
     int96 totalPrincipalPerYear = (_amountRaised * 365) / _loanTerm; 
@@ -147,6 +144,7 @@ contract Bond is SuperAppBase {
 
         (, int96  initialBorrowerFlowRate, , ) = _cfa.getFlow(_acceptedToken, address(this), borrower);
          _initialBorrowerFlowRate = initialBorrowerFlowRate;
+         emit TransferAllToBorrower(_amountRaised, borrower, address(this));
     }
 
 /// @dev sets the flow rate for each investor for easy creation of CFA agreement
@@ -164,8 +162,6 @@ contract Bond is SuperAppBase {
         private
         returns (bytes memory newCtx)
     {
-        //int96 contractNetFlowRate = _cfa.getNetFlow(_acceptedToken,address(this)); 
-
         //get the latest borrower flow rate to the loan contract
         (, int96 newBorrowerFlowRate, , ) = _cfa.getFlow(_acceptedToken,address(this),borrower);
         
@@ -185,8 +181,10 @@ contract Bond is SuperAppBase {
                     _acceptedToken,
                     outFlowRate
                 );
-            initialSetup = false; //stop the initial CFAs to investors being setup again
             }
+            initialSetup = false; //stop the initial CFAs to investors being setup again
+            emit InitialSetup(borrower,newBorrowerFlowRate, address(_acceptedToken));
+        
         } else if (newBorrowerFlowRate == int(0)) { //borrower has deleted the repayment flow to the contract
             //delete all CFAs to all investors
             for (uint256 i = 1; i <= numOfInvestors; i++) {
@@ -197,27 +195,30 @@ contract Bond is SuperAppBase {
                     _acceptedToken
                 );
             }
+            emit cfaTerminated(borrower,address(this));
+
         } else { // CFA inflows to this contract have been updated
 
             if (newBorrowerFlowRate != _initialBorrowerFlowRate ) { //borrower CFA has been updated
 
-                //update all investor flow rates
-                _setAllInvestorFlowRates();
+            // SHOULD I BE UPDATING THE FLOW RATES OUT TO INVESTORS AT ALL HERE IF THE BORROWER CHANGES THEIR INFLOW?
+            //PROBABLY NOT SINCE THE INTEREST IS SET BY HOW MUCH WAS RAISED, NOT HOW MUCH WAS FLOWING IN
 
-                //update all CFAs to all investors
-                for (uint256 i = 1; i <= numOfInvestors; i++) {
-                    newCtx = cfaV1.updateFlowWithCtx(
-                                newCtx,
-                                lenderAddresses[i-1],
-                                _acceptedToken,
-                                lenderFlowRate[lenderAddresses[i-1]]
-                            );
-                }
+                // //update all investor flow rates
+                // _setAllInvestorFlowRates();
+
+                // //update all CFAs to all investors
+                // for (uint256 i = 1; i <= numOfInvestors; i++) {
+                //     newCtx = cfaV1.updateFlowWithCtx(
+                //                 newCtx,
+                //                 lenderAddresses[i-1],
+                //                 _acceptedToken,
+                //                 lenderFlowRate[lenderAddresses[i-1]]
+                //             );
+                // }
             }
         }
     }
-
-
 
     /**************************************************************************
      * SuperApp callbacks
@@ -322,14 +323,4 @@ contract Bond is SuperAppBase {
         _;
     }
     
-    // /**
-    //  * @dev Throws if called by any account other than the borrower.
-    //  */
-    // modifier onlyBorrower() {
-    //     require(borrower == msg.sender, "only the borrower can call this function");
-    //     _;
-    // }
-
-
-
 }

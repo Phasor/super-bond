@@ -122,14 +122,13 @@ contract Bond is SuperAppBase {
     
     ///// THIS IS NOT RIGHT< SHOULD BE ABLE TO DEAL WITH A SITUATION WHERE BORROWER UPDATES FLOW
 
-    int96 totalInterestPerYearWei = (_amountRaised * _fundingRate) / 10000;  //wei
-    int96 totalPrincipalPerYearWei = (_amountRaised * 365) / _loanTerm; //wei
-    int96 totalRepaymentPerYearWei = totalInterestPerYearWei + totalPrincipalPerYearWei; //wei
+    int96 totalInterestPerYear = (_amountRaised * _fundingRate) / 10000;  
+    int96 totalPrincipalPerYear = (_amountRaised * 365) / _loanTerm; 
+    int96 totalRepaymentPerYear = totalInterestPerYear + totalPrincipalPerYear;
     
-    //does the contract still have eth in? ************************************?????!??
-    int96 totalInvestorCFPerYearWei = (lenderContributions[investorAddress] * totalRepaymentPerYearWei) / _amountRaised;
-    int96 totalInvestorCFPerSecondWei = totalInvestorCFPerYearWei / secondsPerYear; 
-    flowRate = totalInvestorCFPerSecondWei;
+    int96 totalInvestorCFPerYear = (lenderContributions[investorAddress] * totalRepaymentPerYear) / _amountRaised;
+    int96 totalInvestorCFPerSecond = totalInvestorCFPerYear / secondsPerYear; 
+    flowRate = totalInvestorCFPerSecond;
     }
 
 /// @dev transfers the investors funds raised from this contract to the borrower

@@ -24,10 +24,10 @@ contract Bond is SuperAppBase {
     ISuperToken private _acceptedToken; // wrapped super token
     address public acceptedTokenAddress;
     //variables for bond logic
-    int96 private _fundingTarget; //the amount in wei the borrower wants to raise from the bond
-    int96 private _amountRaised; // wei actually raised at the end of the campaign
-    int96 private _fundingRate; //interest per year in basis points
-    int96 private _loanTerm; //length of loan, days
+    int96 public _fundingTarget; //the amount in wei the borrower wants to raise from the bond
+    int96 public _amountRaised; // wei actually raised at the end of the campaign
+    int96 public _fundingRate; //interest per year in basis points
+    int96 public _loanTerm; //length of loan, days
     address public borrower;
     address private _admin = 0x870ac8121ba4a31dE8E5D91675edf3f937B8D7e9;
     int96 _initialBorrowerFlowRate;

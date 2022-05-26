@@ -1,9 +1,11 @@
-import './css/App.css';
+import '../css/App.css';
+import Nav from './Nav';
+
 
 function App() {
   return (
     <div className="App">
-      <p>Working</p>
+      <Nav/>
     </div>
   );
 }

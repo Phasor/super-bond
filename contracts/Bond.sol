@@ -92,6 +92,7 @@ contract Bond is SuperAppBase {
     
 
 /// @dev deposit wrapped ERC20's for lending to the borrower
+/// @dev assumes approve() has been called on the front end already
     function deposit(int96 amount, address tokenAddress ) external {
         require(tokenAddress == acceptedTokenAddress, "Can not deposit this token");
         require(openToDeposits,"closed to deposits");

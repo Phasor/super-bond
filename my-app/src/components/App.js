@@ -1,23 +1,25 @@
 import '../css/App.css';
 import Nav from './Nav';
 import Main from './Main';
-import React, {useState} from 'react';
+import { Web3ReactProvider } from '@web3-react/core'
+import { Web3Provider } from '@ethersproject/providers'
+
+function getLibrary(provider) {
+  const library = new Web3Provider(provider)
+  library.pollingInterval = 12000
+  return library
+}
 
 
 function App() {
-  const [provider, setProvider] = useState();
-  const [signer, setSigner] = useState();
-
-  const setProviderAndSigner = (provider,signer) => {
-    setProvider(provider);
-    setSigner(signer);
-  }
 
   return (
-    <div className="App">
-      <Nav providerAndSigner={setProviderAndSigner}/>
-      <Main provider={provider} signer={signer} />
-    </div>
+    <Web3ReactProvider getLibrary={getLibrary}>
+      <div className="App">
+        <Nav/>
+        <Main/>
+      </div>
+    </Web3ReactProvider>
   );
 }
 

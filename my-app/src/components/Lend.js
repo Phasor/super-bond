@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function Lend(props) {
+export default function Lend() {
   return (
     <>
         <div>Lending Info Working</div>

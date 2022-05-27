@@ -22,8 +22,8 @@ export default function Main(props) {
                     <button className={`main-content-tabs-button ${tab === "lend" ? "active" : ""}`} onClick={changeTab}>Lend</button>
                 </div>
                 <div className="main-content-form">
-                    {tab === "borrow" && <Borrow provider={props.provider} signer={props.signer}/>} 
-                    {tab === "lend" && <Lend provider={props.provider} signer={props.signer}/>} 
+                    {tab === "borrow" && <Borrow/>} 
+                    {tab === "lend" && <Lend/>} 
                 </div>
             </div>
         </div>

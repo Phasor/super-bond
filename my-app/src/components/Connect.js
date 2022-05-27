@@ -1,40 +1,33 @@
 import React from 'react';
-import { useState } from "react";
 import '../css/Connect.css';
-import { ethers } from "ethers";
+import { useWeb3React } from '@web3-react/core'
+import { Web3Provider } from '@ethersproject/providers'
+import { InjectedConnector } from '@web3-react/injected-connector'
 
 
-export default function Connect(props) {
-  const [address, setAddress] = useState();
-  const [shortAddress, setShortAddress] = useState();
+export default function Connect() {
+  const injectedConnector = new InjectedConnector({supportedChainIds: [1,3, 4, 5, 42, ],});
+  const { chainId, account, activate, active,library } = useWeb3React();
+  
+  const handleClick = () => {
+    activate(injectedConnector)
+  }
 
-  // A Web3Provider wraps a standard Web3 provider, which is
-  // what MetaMask injects as window.ethereum into each page
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  // The MetaMask plugin also allows signing transactions to
-  // send ether and pay to change state within the blockchain.
-  // For this, you need the account signer...
-  const signer = provider.getSigner()
-
-  // MetaMask requires requesting permission to connect users accounts
-  const requestConnection = async () => {
-    await provider.send("eth_requestAccounts", []);
-    const connectedAddress = await signer.getAddress();
-
-    //set provider and signer in App component
-    const setProviderAndSigner = props.providerAndSigner;
-    await setProviderAndSigner(provider,signer);
-
-    //set local variables for display purposes
-    const shortAddress = connectedAddress.substring(0, 7);
-    setAddress(connectedAddress);
-    setShortAddress(shortAddress);
-  } 
+  const shortenAddress = (address) => {
+    return `${address.substring(0,6)}...`;
+  }
 
   return (
     <>
-      {!address && <button class="connect-button" onClick={requestConnection}>Connect</button>}
-      {address && <button class="connect-button" onClick={() => window.location.reload(false)}>{shortAddress}...</button>}
+    {active ? (
+      <button class="connect-button">{shortenAddress(account)}</button>
+    ) : (
+      <button class="connect-button" onClick={handleClick}>Connect</button>
+    )
+    
+  
+  }
+      
     </>
   )
 }

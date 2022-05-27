@@ -3,7 +3,7 @@ import '../css/Main.css'
 import Borrow from './Borrow';
 import Lend from './Lend';
 
-export default function Main() {
+export default function Main(props) {
     const [tab, setTab] = useState("borrow");
   
     const changeTab = () => {
@@ -22,8 +22,8 @@ export default function Main() {
                     <button className={`main-content-tabs-button ${tab === "lend" ? "active" : ""}`} onClick={changeTab}>Lend</button>
                 </div>
                 <div className="main-content-form">
-                    {tab === "borrow" && <Borrow/>} 
-                    {tab === "lend" && <Lend/>} 
+                    {tab === "borrow" && <Borrow provider={props.provider} signer={props.signer}/>} 
+                    {tab === "lend" && <Lend provider={props.provider} signer={props.signer}/>} 
                 </div>
             </div>
         </div>

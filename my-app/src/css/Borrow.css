@@ -22,3 +22,19 @@
     margin: 10px;
     padding: 10px;
 }
+
+.button-deploy-container{
+    display: flex;
+    justify-content: center;
+}
+
+.button-deploy{
+    font-size: 20px;
+    background-color: lightskyblue;
+    text-decoration: none;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+}

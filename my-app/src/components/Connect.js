@@ -4,7 +4,7 @@ import '../css/Connect.css';
 import { ethers } from "ethers";
 
 
-export default function Connect() {
+export default function Connect(props) {
   const [address, setAddress] = useState();
   const [shortAddress, setShortAddress] = useState();
 
@@ -20,6 +20,12 @@ export default function Connect() {
   const requestConnection = async () => {
     await provider.send("eth_requestAccounts", []);
     const connectedAddress = await signer.getAddress();
+
+    //set provider and signer in App component
+    const setProviderAndSigner = props.providerAndSigner;
+    await setProviderAndSigner(provider,signer);
+
+    //set local variables for display purposes
     const shortAddress = connectedAddress.substring(0, 7);
     setAddress(connectedAddress);
     setShortAddress(shortAddress);

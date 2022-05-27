@@ -18,8 +18,8 @@ export default function Main() {
         <div className="main-container">
             <div className="main-content">
                 <div className="main-content-tabs">
-                    <button className="main-content-tabs-button" onClick={changeTab}>Borrow</button>
-                    <button className="main-content-tabs-button" onClick={changeTab}>Lend</button>
+                    <button className={`main-content-tabs-button ${tab === "borrow" ? "active" : ""}`} onClick={changeTab}>Borrow</button>
+                    <button className={`main-content-tabs-button ${tab === "lend" ? "active" : ""}`} onClick={changeTab}>Lend</button>
                 </div>
                 <div className="main-content-form">
                     {tab === "borrow" && <Borrow/>} 

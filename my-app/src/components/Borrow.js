@@ -22,11 +22,11 @@ export default function Borrow(props) {
 } = useWeb3React();
   
   const handleSubmit = (e) => {
-    setAmountToRaise(e.target.amount);
-    setRate(e.target.interestRateAnnual);
-    setTerm(e.target.termDays);
-
-
+    e.preventDefault();
+    setAmountToRaise(e.target.amount.value);
+    setRate(e.target.interestRateAnnual.value);
+    setTerm(e.target.termDays.value);
+    console.log("Amount: " + amountToRaise + "\nRate: " + rate + "\nTerm: " + term);
   }
 
   const balance = async () => {

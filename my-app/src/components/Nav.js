@@ -2,13 +2,13 @@ import React from 'react'
 import '../css/Nav.css'
 import Connect from './Connect';
 
-export default function Nav(props) {
+export default function Nav() {
 
 
   return (
     <div class="nav-container">
         <div className="connect-container">
-            <Connect providerAndSigner={props.providerAndSigner}/>
+            <Connect/>
         </div>
     </div>
   )

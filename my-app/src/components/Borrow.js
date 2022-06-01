@@ -1,15 +1,41 @@
 import React, {useState} from 'react'
 import '../css/Borrow.css';
-
+import { useWeb3React } from '@web3-react/core';
+import { formatEther } from '@ethersproject/units';
 
 export default function Borrow(props) {
   const [amountToRaise, setAmountToRaise] = useState();
   const [rate, setRate] = useState();
   const [term, setTerm] = useState();
+ 
+  const {
+    account,
+    activate,
+    active,
+    chainId,
+    connector,
+    deactivate,
+    error,
+    provider,
+    setError,
+    library,
+} = useWeb3React();
   
-  const handleSubmit = () => {
+  const handleSubmit = (e) => {
+    setAmountToRaise(e.target.amount);
+    setRate(e.target.interestRateAnnual);
+    setTerm(e.target.termDays);
+
 
   }
+
+  const balance = async () => {
+    var provider = library;
+    var balance = await provider.getBalance( account );
+    console.log(formatEther(balance));
+  }
+
+  balance();
 
   return (
       <div className='borrow-container'>
@@ -21,6 +47,7 @@ export default function Borrow(props) {
               <label htmlFor="">Amount to Raise ($)</label>
               <input type="text" 
                   required
+                  name="amount"
                   value={amountToRaise}
                   onChange={(e) => {setAmountToRaise(e.target.value)}}
               />
@@ -29,6 +56,7 @@ export default function Borrow(props) {
               <label htmlFor="">Interest Paid Annually (%)</label>
               <input type="text" 
                   required
+                  name="interestRateAnnual"
                   value={rate}
                   onChange={(e) => {setRate(e.target.value)}}
               />
@@ -37,6 +65,7 @@ export default function Borrow(props) {
               <label htmlFor="">Loan Term (days)</label>
               <input type="text" 
                   required
+                  name="termDays"
                   value={term}
                   onChange={(e) => {setTerm(e.target.value)}}
               />
@@ -44,6 +73,7 @@ export default function Borrow(props) {
             <div className='button-deploy-container'>
               <button className='button-deploy'>Deploy Loan</button>
             </div>
+          
        </form>
        
        

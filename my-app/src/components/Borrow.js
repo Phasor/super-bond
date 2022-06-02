@@ -2,12 +2,13 @@ import React, {useState} from 'react'
 import '../css/Borrow.css';
 import { useWeb3React } from '@web3-react/core';
 import { formatEther } from '@ethersproject/units';
+import {abi} from "../abi";
+import {ethers} from 'ethers';
 
 export default function Borrow(props) {
   const [amountToRaise, setAmountToRaise] = useState();
   const [rate, setRate] = useState();
   const [term, setTerm] = useState();
- 
   const {
     account,
     activate,
@@ -21,6 +22,9 @@ export default function Borrow(props) {
     library,
 } = useWeb3React();
   
+  const contractAddress = "0x48e231fA9bC484980D7e90f14a6CdcF07aBbd90E";
+  const bondContract = new ethers.Contract(contractAddress, abi, library);
+  
   const handleSubmit = (e) => {
     e.preventDefault();
     setAmountToRaise(e.target.amount.value);
@@ -30,9 +34,10 @@ export default function Borrow(props) {
   }
 
   const balance = async () => {
-    var provider = library;
-    var balance = await provider.getBalance( account );
+    var balance = await library.getBalance( account );
     console.log(formatEther(balance));
+    var rateFromChain = await bondContract._loanTerm();
+    console.log(rateFromChain/(10**18));
   }
 
   balance();

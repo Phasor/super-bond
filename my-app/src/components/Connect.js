@@ -24,12 +24,12 @@ export default function Connect() {
 
   const handleClick = async (connector) => {
     activate(injectedConnector)
-    // read-only
-    let ethersProvider = new ethers.providers.JsonRpcProvider(process.env.API_ENDPOINT);
-    let { provider } = await connector.activate();
-    // signer
-    const signer = provider.getSigner;
-    ethersProvider = new Web3Provider(signer);
+    // // read-only
+    // let ethersProvider = new ethers.providers.JsonRpcProvider(process.env.API_ENDPOINT);
+    // let { provider } = await connector.activate();
+    // // signer
+    // const signer = provider.getSigner;
+    // ethersProvider = new Web3Provider(signer);
   }
 
   useEffect(() => {

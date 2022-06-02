@@ -1,14 +1,15 @@
 import React, {useState} from 'react'
 import '../css/Borrow.css';
 import { useWeb3React } from '@web3-react/core';
-import { formatEther } from '@ethersproject/units';
+//import { formatEther } from '@ethersproject/units';
 import {abi} from "../abi";
-import {ethers} from 'ethers';
+import {useContract} from '../Hooks/useContract';
 
 export default function Borrow(props) {
   const [amountToRaise, setAmountToRaise] = useState();
   const [rate, setRate] = useState();
   const [term, setTerm] = useState();
+  const [admin,setAdmin] = useState();
   const {
     account,
     activate,
@@ -23,8 +24,9 @@ export default function Borrow(props) {
 } = useWeb3React();
   
   const contractAddress = "0x48e231fA9bC484980D7e90f14a6CdcF07aBbd90E";
-  const bondContract = new ethers.Contract(contractAddress, abi, library);
+  const bondContract = useContract(contractAddress, abi);
   
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setAmountToRaise(e.target.amount.value);
@@ -33,14 +35,17 @@ export default function Borrow(props) {
     console.log("Amount: " + amountToRaise + "\nRate: " + rate + "\nTerm: " + term);
   }
 
-  const balance = async () => {
-    var balance = await library.getBalance( account );
-    console.log(formatEther(balance));
-    var rateFromChain = await bondContract._loanTerm();
-    console.log(rateFromChain/(10**18));
-  }
+  const changeAdmin = async (e) => {
+    e.preventDefault();
+    if(active){
+      const txn = await bondContract.setAdmin(e.target.newAdmin.value);
+      console.log("Txn: " + {txn});
 
-  balance();
+      //fetch latest admin value from chain
+      const newAdmin = await bondContract.admin();
+      console.log("New admin is: " + {newAdmin});
+    }
+  }
 
   return (
       <div className='borrow-container'>
@@ -80,6 +85,16 @@ export default function Borrow(props) {
             </div>
           
        </form>
+       <div>
+        <form onSubmit={changeAdmin}>
+          <label>Change Admin</label>
+          <input type="text" 
+            value={admin}
+            name="newAdmin"
+            onChange={(e) => {setAdmin(e.target.newAdmin.value)}} />
+          <button>Change</button>
+        </form>
+       </div>
        
        
     </div>
